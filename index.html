@@ -1,0 +1,1209 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>BetBetter</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            bb: {
+              bg: '#0b0e14', card: '#12151c', elevated: '#1a1f2a', border: '#252b38',
+              muted: '#8b95a8', green: '#00d68f', red: '#ff4d4d', orange: '#f97316',
+              blue: '#3b82f6', purple: '#a855f7'
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    body { background:#0b0e14; color:#e8eaed; font-family:Inter,system-ui,sans-serif; }
+    .view { display:none; } .view.active { display:block; }
+    .nav-active { background:#1a1f2a; color:#fff; }
+    .nav-inactive { color:#8b95a8; }
+    .rank-elite { background:rgba(0,214,143,.15); color:#00d68f; }
+    .rank-good { background:rgba(59,130,246,.15); color:#3b82f6; }
+    .rank-pass { background:rgba(139,149,168,.12); color:#8b95a8; }
+    .live-dot { animation: pulse 1.5s infinite; }
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
+    .bar-yes { background: linear-gradient(90deg,#f97316,#fb923c); }
+    .filter-on { background:#00d68f; color:#0b0e14; font-weight:600; }
+    .filter-off { background:transparent; color:#8b95a8; border:1px solid #252b38; }
+    .score-ring { width:44px; height:44px; border-radius:999px; display:flex; align-items:center; justify-content:center;
+      font-weight:700; font-size:12px; border:2px solid #252b38; }
+  </style>
+</head>
+<body class="min-h-screen">
+  <header class="border-b border-bb-border sticky top-0 z-40 bg-bb-bg/95 backdrop-blur">
+    <div class="max-w-5xl mx-auto px-4 h-14 flex items-center justify-between gap-3">
+      <div class="flex items-center gap-2">
+        <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-bb-green to-cyan-400 flex items-center justify-center text-bb-bg font-bold text-sm">B</div>
+        <span class="font-semibold">BetBetter</span>
+      </div>
+      <nav class="flex gap-1 text-sm">
+        <button type="button" data-view="scanner" class="nav-btn nav-active px-3 py-1.5 rounded-lg">Scanner</button>
+        <button type="button" data-view="markets" class="nav-btn nav-inactive px-3 py-1.5 rounded-lg">Markets</button>
+        <button type="button" data-view="portfolio" class="nav-btn nav-inactive px-3 py-1.5 rounded-lg">Portfolio</button>
+        <button type="button" data-view="settings" class="nav-btn nav-inactive px-3 py-1.5 rounded-lg">Settings</button>
+      </nav>
+      <div class="flex items-center gap-2">
+        <span id="auth-label" class="text-xs text-bb-muted hidden sm:inline">Guest</span>
+        <button type="button" id="btn-login" onclick="openLogin()" class="text-xs px-2.5 py-1.5 rounded-lg border border-bb-border text-bb-muted">Log in</button>
+        <button type="button" id="btn-logout" onclick="logout()" class="hidden text-xs px-2.5 py-1.5 rounded-lg border border-bb-border text-bb-muted">Log out</button>
+      </div>
+    </div>
+  </header>
+
+  <div id="view-scanner" class="view active">
+    <div class="max-w-5xl mx-auto px-4 py-6 space-y-5">
+      <div>
+        <h1 class="text-xl font-semibold">Scanner</h1>
+        <p class="text-sm text-bb-muted">Evaluate · 4 models · Polymarket US</p>
+      </div>
+
+      <div class="flex flex-wrap gap-2">
+        <button type="button" data-mode="all" class="mode-btn filter-on text-xs px-3 py-1.5 rounded-full" onclick="setMode('all')">All</button>
+        <button type="button" data-mode="live" class="mode-btn filter-off text-xs px-3 py-1.5 rounded-full" onclick="setMode('live')">Live</button>
+        <button type="button" data-mode="upcoming" class="mode-btn filter-off text-xs px-3 py-1.5 rounded-full" onclick="setMode('upcoming')">Upcoming</button>
+        <button type="button" onclick="loadGames()" class="text-xs px-3 py-1.5 rounded-full border border-bb-border text-bb-muted">Refresh</button>
+      </div>
+
+      <div class="flex flex-wrap gap-2" id="sport-filters">
+        <button type="button" data-league="" class="league-btn filter-on text-xs px-3 py-1.5 rounded-full" onclick="setLeague('')">All sports</button>
+        <button type="button" data-league="nba" class="league-btn filter-off text-xs px-3 py-1.5 rounded-full" onclick="setLeague('nba')">NBA</button>
+        <button type="button" data-league="wnba" class="league-btn filter-off text-xs px-3 py-1.5 rounded-full" onclick="setLeague('wnba')">WNBA</button>
+        <button type="button" data-league="nfl" class="league-btn filter-off text-xs px-3 py-1.5 rounded-full" onclick="setLeague('nfl')">NFL</button>
+        <button type="button" data-league="cfb" class="league-btn filter-off text-xs px-3 py-1.5 rounded-full" onclick="setLeague('cfb')">CFB</button>
+        <button type="button" data-league="cbb" class="league-btn filter-off text-xs px-3 py-1.5 rounded-full" onclick="setLeague('cbb')">CBB</button>
+        <button type="button" data-league="mlb" class="league-btn filter-off text-xs px-3 py-1.5 rounded-full" onclick="setLeague('mlb')">MLB</button>
+        <button type="button" data-league="ufc" class="league-btn filter-off text-xs px-3 py-1.5 rounded-full" onclick="setLeague('ufc')">UFC</button>
+        <button type="button" data-league="atp" class="league-btn filter-off text-xs px-3 py-1.5 rounded-full" onclick="setLeague('atp')">ATP</button>
+        <button type="button" data-league="wta" class="league-btn filter-off text-xs px-3 py-1.5 rounded-full" onclick="setLeague('wta')">WTA</button>
+      </div>
+
+      <!-- Scan type: ML / spreads / totals / props -->
+      <div class="flex flex-wrap gap-2">
+        <span class="text-xs text-bb-muted self-center mr-1">Scan</span>
+        <button type="button" data-mtype="all" class="mtype-btn filter-on text-xs px-3 py-1.5 rounded-full" onclick="setMarketType('all')">Games (ML)</button>
+        <button type="button" data-mtype="moneyline" class="mtype-btn filter-off text-xs px-3 py-1.5 rounded-full" onclick="setMarketType('moneyline')">Moneyline</button>
+        <button type="button" data-mtype="spread" class="mtype-btn filter-off text-xs px-3 py-1.5 rounded-full" onclick="setMarketType('spread')">Spreads</button>
+        <button type="button" data-mtype="total" class="mtype-btn filter-off text-xs px-3 py-1.5 rounded-full" onclick="setMarketType('total')">Over/Under</button>
+        <button type="button" data-mtype="f5" class="mtype-btn filter-off text-xs px-3 py-1.5 rounded-full" onclick="setMarketType('f5')">F5</button>
+        <button type="button" data-mtype="nrfi" class="mtype-btn filter-off text-xs px-3 py-1.5 rounded-full" onclick="setMarketType('nrfi')">NRFI/YRFI</button>
+        <button type="button" data-mtype="prop" class="mtype-btn filter-off text-xs px-3 py-1.5 rounded-full" onclick="setMarketType('prop')">Props</button>
+      </div>
+
+      <div class="flex flex-wrap items-center gap-3 text-xs">
+        <label class="text-bb-muted flex items-center gap-1.5">Min edge
+          <select id="filter-edge" onchange="loadGames()" class="bg-bb-card border border-bb-border rounded-lg px-2 py-1 text-white">
+            <option value="0">Any</option><option value="2">≥2%</option><option value="3">≥3%</option><option value="5">≥5%</option>
+          </select>
+        </label>
+        <label class="text-bb-muted flex items-center gap-1.5">Min score
+          <select id="filter-score" onchange="loadGames()" class="bg-bb-card border border-bb-border rounded-lg px-2 py-1 text-white">
+            <option value="0">Any</option><option value="60">≥60</option><option value="70">≥70</option><option value="80">≥80</option>
+          </select>
+        </label>
+        <label class="text-bb-muted flex items-center gap-1.5">Rank
+          <select id="filter-rank" onchange="loadGames()" class="bg-bb-card border border-bb-border rounded-lg px-2 py-1 text-white">
+            <option value="">All</option><option value="good">Good+</option><option value="elite">Elite</option>
+          </select>
+        </label>
+        <label class="flex items-center gap-2 text-bb-muted cursor-pointer">
+          <input type="checkbox" id="auto-discord-elite" onchange="saveAutoDiscord()" /> Auto Discord Elite
+        </label>
+      </div>
+
+      <p class="text-xs text-bb-muted" id="meta-line">Loading…</p>
+      <div id="odds-strip" class="text-xs text-bb-muted"></div>
+      <div id="games-list" class="grid gap-4 sm:grid-cols-2"></div>
+    </div>
+  </div>
+
+  <div id="view-markets" class="view">
+    <div class="max-w-5xl mx-auto px-4 py-6 space-y-4">
+      <h1 class="text-xl font-semibold">Markets</h1>
+      <p class="text-sm text-bb-muted">Full slate · live first · upcoming chronological</p>
+      <div class="flex flex-wrap gap-2">
+        <button type="button" data-mode="all" class="mode-btn-mkt filter-on text-xs px-3 py-1.5 rounded-full" onclick="marketsSetMode('all')">All</button>
+        <button type="button" data-mode="live" class="mode-btn-mkt filter-off text-xs px-3 py-1.5 rounded-full" onclick="marketsSetMode('live')">Live</button>
+        <button type="button" data-mode="upcoming" class="mode-btn-mkt filter-off text-xs px-3 py-1.5 rounded-full" onclick="marketsSetMode('upcoming')">Upcoming</button>
+        <button type="button" class="text-xs px-3 py-1.5 rounded-full border border-bb-border text-bb-muted" onclick="loadGames()">Refresh</button>
+      </div>
+      <div class="flex flex-wrap gap-2">
+        <button type="button" class="text-xs px-3 py-1.5 rounded-full filter-off" onclick="setMarketType('all');loadGames()">All markets</button>
+        <button type="button" class="text-xs px-3 py-1.5 rounded-full filter-off" onclick="setMarketType('moneyline');loadGames()">ML</button>
+        <button type="button" class="text-xs px-3 py-1.5 rounded-full filter-off" onclick="setMarketType('spread');loadGames()">Spreads</button>
+        <button type="button" class="text-xs px-3 py-1.5 rounded-full filter-off" onclick="setMarketType('total');loadGames()">Over/Under</button>
+        <button type="button" class="text-xs px-3 py-1.5 rounded-full filter-off" onclick="setMarketType('f5');loadGames()">F5</button>
+        <button type="button" class="text-xs px-3 py-1.5 rounded-full filter-off" onclick="setMarketType('nrfi');loadGames()">NRFI/YRFI</button>
+        <button type="button" class="text-xs px-3 py-1.5 rounded-full filter-off" onclick="setMarketType('prop');loadGames()">Props</button>
+      </div>
+      <p class="text-xs text-bb-muted" id="markets-meta">—</p>
+      <div id="markets-list" class="grid gap-4 sm:grid-cols-2"></div>
+    </div>
+  </div>
+
+    <div id="view-portfolio" class="view">
+    <div class="max-w-5xl mx-auto px-4 py-6 space-y-4">
+      <h1 class="text-xl font-semibold">Portfolio &amp; Model Health</h1>
+      <p class="text-sm text-bb-muted">Journal learning (71–80) · CLV · digest (97) · health (100)</p>
+      <div id="learning-banner" class="hidden rounded-xl border border-bb-border bg-bb-card p-3 text-xs space-y-1"></div>
+      <div class="flex flex-wrap gap-2">
+        <button type="button" onclick="renderPortfolio()" class="text-xs px-3 py-1.5 rounded-lg border border-bb-border text-bb-muted">Refresh stats</button>
+        <button type="button" onclick="sendDigest()" class="text-xs px-3 py-1.5 rounded-lg bg-[#5865F2]/20 text-[#5865F2] border border-[#5865F2]/30">Send Discord digest</button>
+        <button type="button" onclick="exportJournal()" class="text-xs px-3 py-1.5 rounded-lg border border-bb-border text-bb-muted">Export journal JSON</button>
+      </div>
+      <div id="health-box" class="rounded-2xl border border-bb-border bg-bb-card p-4 text-sm space-y-3">
+        <p class="text-bb-muted text-xs">Settle bets to unlock hit rate, CLV, kill tags, Elite threshold.</p>
+      </div>
+      <div id="portfolio-box" class="rounded-2xl border border-bb-border bg-bb-card p-4 text-sm text-bb-muted">Sign in to track personal journal.</div>
+    </div>
+  </div>
+
+  <div id="view-settings" class="view">
+    <div class="max-w-lg mx-auto px-4 py-6 space-y-4">
+      <h1 class="text-xl font-semibold">Settings</h1>
+      <div class="rounded-2xl border border-bb-border bg-bb-card p-5 space-y-3">
+        <p class="text-xs text-bb-muted">OpenAI (Deep Research)</p>
+        <input id="openai-key" type="password" placeholder="sk-..." class="w-full bg-bb-bg border border-bb-border rounded-lg px-3 py-2 text-sm font-mono" />
+        <select id="openai-model" class="w-full bg-bb-bg border border-bb-border rounded-lg px-3 py-2 text-sm">
+          <option value="gpt-4o">gpt-4o</option>
+          <option value="gpt-4o-mini">gpt-4o-mini</option>
+        </select>
+        <p class="text-xs text-bb-muted pt-2">Discord webhook</p>
+        <input id="webhook-url" placeholder="https://discord.com/api/webhooks/..." class="w-full bg-bb-bg border border-bb-border rounded-lg px-3 py-2 text-sm" />
+        <p class="text-xs text-bb-muted pt-3">Polymarket US API (testing — prefer Vercel env in production)</p>
+        <input id="poly-key-id" placeholder="Key ID" class="w-full bg-bb-bg border border-bb-border rounded-lg px-3 py-2 text-sm font-mono" />
+        <input id="poly-secret" type="password" placeholder="Secret Key" class="w-full bg-bb-bg border border-bb-border rounded-lg px-3 py-2 text-sm font-mono" />
+        <p class="text-[10px] text-bb-muted">Used later for signed WS trades/books. Public gateway book works without these.</p>
+        <p class="text-xs text-bb-muted pt-3">The Odds API (free tier) — sportsbook feedback</p>
+        <input id="odds-api-key" type="password" placeholder="Odds API key" class="w-full bg-bb-bg border border-bb-border rounded-lg px-3 py-2 text-sm font-mono" />
+        <p class="text-[10px] text-bb-muted">Get free key at the-odds-api.com · also set ODDS_API_KEY on Vercel</p>
+        <button type="button" onclick="saveSettings()" class="text-xs px-4 py-2 rounded-lg bg-bb-green text-bb-bg font-semibold">Save</button>
+        <button type="button" onclick="testOdds()" class="text-xs px-4 py-2 rounded-lg border border-bb-border text-bb-muted">Test Odds API</button>
+      </div>
+      <div class="rounded-2xl border border-bb-border bg-bb-card p-5 text-xs text-bb-muted space-y-2">
+        <p class="text-white text-sm font-medium">Evaluate models (5)</p>
+        <p>1 Real EV · 2 WinP · 3 Smart$ · 4 Liq/Vol · 5 Line move (LM). Books/MC sit under the card. CLV after you settle bets.</p>
+        <p>True smart-money clusters need CLOB trade tape + size aggregation (+ optional wallet labels).</p>
+      </div>
+    </div>
+  </div>
+
+  
+  <!-- Live Focus panel -->
+  <div id="focus-panel" class="hidden fixed inset-0 z-50" style="background:rgba(0,0,0,.8)">
+    <div class="absolute inset-x-0 bottom-0 top-10 sm:inset-8 sm:top-12 bg-bb-bg border border-bb-border rounded-t-2xl sm:rounded-2xl overflow-hidden flex flex-col max-w-3xl sm:mx-auto">
+      <div class="flex items-center justify-between gap-2 px-4 py-3 border-b border-bb-border">
+        <div class="min-w-0">
+          <p class="text-[10px] uppercase tracking-wider text-bb-muted">Live Focus</p>
+          <h2 id="focus-title" class="font-semibold text-sm sm:text-base truncate">—</h2>
+          <p id="focus-sub" class="text-xs text-bb-muted truncate"></p>
+        </div>
+        <button type="button" onclick="closeFocus()" class="text-xs px-3 py-1.5 rounded-lg border border-bb-border text-bb-muted shrink-0">Close</button>
+      </div>
+      <div id="focus-body" class="flex-1 overflow-y-auto p-4 space-y-4 text-sm"></div>
+    </div>
+  </div>
+
+  <div id="login-modal" class="hidden fixed inset-0 z-50 items-center justify-center p-4" style="background:rgba(0,0,0,.75)">
+    <div class="bg-bb-card border border-bb-border rounded-2xl p-6 w-full max-w-sm space-y-4">
+      <div class="flex justify-between"><h2 class="font-semibold text-lg">Log in</h2>
+        <button type="button" onclick="closeLogin()" class="text-bb-muted text-sm">Close</button></div>
+      <input id="login-user" placeholder="Username" class="w-full bg-bb-bg border border-bb-border rounded-lg px-3 py-2 text-sm" />
+      <input id="login-pass" type="password" placeholder="Password" class="w-full bg-bb-bg border border-bb-border rounded-lg px-3 py-2 text-sm" />
+      <div class="flex gap-2">
+        <button type="button" onclick="doLogin()" class="flex-1 py-2 rounded-xl bg-bb-green text-bb-bg font-semibold text-sm">Log in</button>
+        <button type="button" onclick="doSignup()" class="flex-1 py-2 rounded-xl border border-bb-border text-sm text-bb-muted">Sign up</button>
+      </div>
+      <a href="/api/auth/discord" class="block w-full py-2.5 rounded-xl bg-[#5865F2] text-white text-center text-sm font-semibold">Continue with Discord</a>
+    </div>
+  </div>
+
+<script>
+(function () {
+  var mode = 'all', league = '', marketType = 'all';
+
+  function $(id) { return document.getElementById(id); }
+  function rankClass(r) {
+    if (r === 'Elite') return 'rank-elite';
+    if (r === 'Good') return 'rank-good';
+    return 'rank-pass';
+  }
+  function scoreColor(s) {
+    if (s >= 80) return '#00d68f';
+    if (s >= 65) return '#3b82f6';
+    if (s >= 50) return '#f97316';
+    return '#8b95a8';
+  }
+
+  window.switchView = function (name) {
+    document.querySelectorAll('.view').forEach(function (v) { v.classList.remove('active'); });
+    var el = $('view-' + name);
+    if (el) el.classList.add('active');
+    document.querySelectorAll('.nav-btn').forEach(function (b) {
+      var on = b.getAttribute('data-view') === name;
+      b.classList.toggle('nav-active', on);
+      b.classList.toggle('nav-inactive', !on);
+    });
+    if (name === 'scanner' || name === 'markets') try { refreshLearning(); } catch (e) {}
+    loadGames();
+    if (name === 'portfolio') renderPortfolio();
+  };
+  document.querySelectorAll('.nav-btn').forEach(function (btn) {
+    btn.addEventListener('click', function () { switchView(btn.getAttribute('data-view')); });
+  });
+
+  window.setMode = function (m) {
+    mode = m || 'all';
+    document.querySelectorAll('.mode-btn').forEach(function (b) {
+      b.className = 'mode-btn text-xs px-3 py-1.5 rounded-full ' + (b.getAttribute('data-mode') === mode ? 'filter-on' : 'filter-off');
+    });
+    loadGames();
+  };
+  window.setLeague = function (l) {
+    league = l || '';
+    document.querySelectorAll('.league-btn').forEach(function (b) {
+      b.className = 'league-btn text-xs px-3 py-1.5 rounded-full ' + ((b.getAttribute('data-league') || '') === league ? 'filter-on' : 'filter-off');
+    });
+    loadGames();
+  };
+  
+  window.marketsSetMode = function (m) {
+    mode = m || 'all';
+    document.querySelectorAll('.mode-btn-mkt').forEach(function (b) {
+      b.className = 'mode-btn-mkt text-xs px-3 py-1.5 rounded-full ' + (b.getAttribute('data-mode') === mode ? 'filter-on' : 'filter-off');
+    });
+    document.querySelectorAll('.mode-btn').forEach(function (b) {
+      b.className = 'mode-btn text-xs px-3 py-1.5 rounded-full ' + (b.getAttribute('data-mode') === mode ? 'filter-on' : 'filter-off');
+    });
+    loadGames();
+  };
+
+  window.setMarketType = function (t) {
+    marketType = t || 'all';
+    document.querySelectorAll('.mtype-btn').forEach(function (b) {
+      b.className = 'mtype-btn text-xs px-3 py-1.5 rounded-full ' + (b.getAttribute('data-mtype') === marketType ? 'filter-on' : 'filter-off');
+    });
+    loadGames();
+  };
+
+  function evalBars(ev, mcText) {
+    if (!ev) return '';
+    var rows = [
+      ['EV', ev.realEv && ev.realEv.score, ev.realEv && (ev.realEv.netEvPct != null ? 'net ' + ev.realEv.netEvPct + '%' : '')],
+      ['WinP', ev.winProbEdge && ev.winProbEdge.score, ev.winProbEdge && (ev.winProbEdge.edgePp != null ? (ev.winProbEdge.edgePp >= 0 ? '+' : '') + ev.winProbEdge.edgePp + 'pp' : '')],
+      ['Smart$', ev.smartMoney && ev.smartMoney.score, ev.smartMoney && (ev.smartMoney.strength != null ? ev.smartMoney.strength + '/5' : '')],
+      ['Liq/Vol', ev.liqVol && ev.liqVol.score, ev.liqVol && (ev.liqVol.label || '')],
+      ['LM', ev.lineMove && ev.lineMove.score, ev.lineMove && (ev.lineMove.label || '')]
+    ];
+    return '<div class="grid grid-cols-5 gap-1 text-[10px]">' + rows.map(function (r) {
+      var sc = r[1];
+      var main = sc != null ? sc : '—';
+      var col = sc != null ? scoreColor(sc) : '#8b95a8';
+      return '<div class="rounded-lg bg-bb-elevated p-1.5 text-center min-w-0">' +
+        '<div class="text-bb-muted truncate">' + r[0] + '</div>' +
+        '<div class="font-bold text-sm" style="color:' + col + '">' + main + '</div>' +
+        '<div class="text-bb-muted truncate">' + (r[2] || '') + '</div></div>';
+    }).join('') + '</div>';
+  }
+
+  function gameCard(g) {
+    var s0 = (g.sides && g.sides[0]) || { name: '—', pct: null, decimal: '—', display: '—' };
+    var s1 = (g.sides && g.sides[1]) || { name: '—', pct: null, decimal: '—', display: '—' };
+    var pct0 = s0.pct != null ? Math.min(100, s0.pct) : 50;
+    var status = g.live
+      ? '<span class="inline-flex items-center gap-1.5 text-xs text-bb-red"><span class="w-1.5 h-1.5 rounded-full bg-bb-red live-dot"></span>' +
+        (g.period || 'LIVE') + (g.score ? ' · ' + g.score : '') + '</span>'
+      : '<span class="text-xs text-bb-muted">' + (g.startTime ? new Date(g.startTime).toLocaleString() : 'Upcoming') + '</span>';
+    var pick = g.modelPick ? String(g.modelPick).replace(/</g, '') : '—';
+    var bs = g.betScore != null ? g.betScore : 0;
+    var edgeStr = (g.netEdge >= 0 ? '+' : '') + (g.netEdge != null ? g.netEdge : '—') + '%';
+    var edgeColor = g.netEdge >= 2 ? 'text-bb-green' : g.netEdge <= -2 ? 'text-bb-red' : 'text-bb-muted';
+    var title = String(g.title || '').replace(/</g, '');
+    var subtitle = g.eventTitle && g.eventTitle !== g.title ? String(g.eventTitle).replace(/</g, '') : '';
+    var liveBadges = (g.liveAnalysis && g.liveAnalysis.badges || []).slice(0, 3);
+
+    var props = g.props || [];
+    var propsHtml = '';
+    if (props.length) {
+      propsHtml = '<div class="pt-2 border-t border-bb-border space-y-1"><p class="text-[10px] uppercase text-bb-muted tracking-wider">Top props</p>' +
+        props.slice(0, 6).map(function (p) {
+          var q = String(p.question || '').replace(/</g, '');
+          if (q.length > 64) q = q.slice(0, 62) + '…';
+          return '<div class="flex justify-between gap-2 text-[11px]"><span class="text-bb-muted truncate">' + q + '</span>' +
+            '<span class="shrink-0"><span class="' + rankClass(p.rank) + ' text-[9px] font-bold px-1 rounded">' + String(p.rank || '').toUpperCase() +
+            '</span> <span class="font-mono">' + (p.betScore || 0) + '</span></span></div>';
+        }).join('') + '</div>';
+    }
+
+    var best = g.bestProp
+      ? '<div class="text-xs text-bb-muted">Best prop: <span class="text-white">' + String(g.bestProp.question || '').replace(/</g, '').slice(0, 50) +
+        '</span> · score ' + (g.bestProp.betScore || 0) + '</div>'
+      : '';
+
+    return '<article class="rounded-2xl border border-bb-border bg-bb-card p-4 space-y-3">' +
+      '<div class="flex items-start justify-between gap-2">' +
+        '<div class="min-w-0"><h3 class="font-semibold text-[15px] leading-snug">' + title + '</h3>' +
+        (subtitle ? '<p class="text-[11px] text-bb-muted mt-0.5">' + subtitle + (g.marketType ? ' · ' + g.marketType.toUpperCase() : '') + '</p>' : '') +
+        '<div class="mt-1 flex flex-wrap items-center gap-2">' + status + liveBadges.map(function(b){ return '<span class="text-[9px] px-1.5 py-0.5 rounded bg-bb-elevated text-bb-muted">' + b + '</span>'; }).join('') +
+        '<span class="text-xs text-bb-muted">· ' + String(g.league || '').toUpperCase() + '</span></div></div>' +
+        '<div class="flex flex-col items-end gap-1 shrink-0">' +
+          '<div class="score-ring" style="border-color:' + scoreColor(bs) + ';color:' + scoreColor(bs) + '">' + bs + '</div>' +
+          '<span class="' + rankClass(g.rank) + ' text-[10px] font-bold px-2 py-0.5 rounded-md">' + String(g.rank || 'PASS').toUpperCase() + '</span>' +
+        '</div></div>' +
+
+      '<div class="rounded-lg bg-bb-elevated px-3 py-2 text-sm space-y-1">' +
+        '<div><span class="text-bb-muted text-xs">Model pick</span> <span class="font-semibold text-bb-green">' + pick + '</span>' +
+        (g.priceDisplay ? ' <span class="font-mono text-white text-xs">' + g.priceDisplay + '</span>' : '') + '</div>' +
+        '<div class="text-xs text-bb-muted">Implied (market) <span class="text-white font-mono">' + (g.impliedPct != null ? g.impliedPct + '%' : '—') +
+        '</span> · Model fair <span class="text-white font-mono">' + (g.modelFairPct != null ? g.modelFairPct + '%' : '—') +
+        '</span> · EV <span class="font-mono ' + edgeColor + '">' + edgeStr + '</span></div>' +
+        '<div class="text-xs text-bb-muted">MC / books: <span class="text-white">' + (g.mcLine || 'Add Odds API key for consensus') + '</span></div>' +
+        best +
+      '</div>' +
+
+      evalBars(g.evaluate, g.mcShort || '—') +
+
+      '<div class="space-y-2">' +
+        '<div class="flex justify-between text-sm gap-2"><span class="font-medium truncate">' + String(s0.name || '').replace(/</g, '') +
+        '</span><span class="text-xs text-bb-muted shrink-0">' + (s0.display || s0.decimal || '') +
+        ' <strong class="text-white text-sm">' + (s0.pct != null ? s0.pct + '%' : '—') + '</strong></span></div>' +
+        '<div class="h-1.5 rounded-full bg-bb-elevated overflow-hidden"><div class="h-full bar-yes rounded-full" style="width:' + pct0 + '%"></div></div>' +
+        '<div class="flex justify-between text-sm gap-2"><span class="font-medium truncate">' + String(s1.name || '').replace(/</g, '') +
+        '</span><span class="text-xs text-bb-muted shrink-0">' + (s1.display || s1.decimal || '') +
+        ' <strong class="text-white text-sm">' + (s1.pct != null ? s1.pct + '%' : '—') + '</strong></span></div>' +
+      '</div>' +
+
+      propsHtml +
+
+      '<div class="flex flex-wrap gap-2 pt-1 border-t border-bb-border">' +
+        '<button type="button" class="focus-btn text-xs px-2.5 py-1 rounded-lg border border-bb-orange/40 text-bb-orange">Live Focus</button>' +'<button type="button" class="deep-btn text-xs px-2.5 py-1 rounded-lg border border-bb-purple/40 text-bb-purple">Deep Research</button>' +
+        '<button type="button" class="discord-btn text-xs px-2.5 py-1 rounded-lg bg-[#5865F2]/20 text-[#5865F2] border border-[#5865F2]/30">Send Discord</button>' +
+        '<button type="button" class="log-bet-btn text-xs px-2.5 py-1 rounded-lg border border-bb-border text-bb-muted">Log bet</button>' +
+        '<a href="' + (g.url || 'https://polymarket.us') + '" target="_blank" rel="noopener" class="text-xs px-2.5 py-1 rounded-lg bg-bb-green/15 text-bb-green border border-bb-green/30">Trade</a>' +
+      '</div>' +
+      '<div class="deep-panel hidden text-xs text-bb-muted bg-bb-elevated rounded-lg p-3 whitespace-pre-wrap"></div>' +
+      '</article>';
+  }
+
+  function bindCardActions(games) {
+    var cards = document.querySelectorAll('#games-list article, #markets-list article');
+    cards.forEach(function (card, i) {
+      var g = games[i % games.length];
+      // map carefully: both lists same html order
+    });
+    // Re-query within each list separately
+    ['games-list', 'markets-list'].forEach(function (listId) {
+      var list = $(listId);
+      if (!list) return;
+      var articles = list.querySelectorAll('article');
+      articles.forEach(function (card, idx) {
+        var g = games[idx];
+        if (!g) return;
+        var deep = card.querySelector('.deep-btn');
+        var disc = card.querySelector('.discord-btn');
+        var logb = card.querySelector('.log-bet-btn');
+        var foc = card.querySelector('.focus-btn');
+        if (foc) foc.onclick = function () { openFocus(g); };
+        if (deep) deep.onclick = function () { runDeep(card, g); };
+        if (disc) disc.onclick = function () { sendDiscord(g); };
+        if (logb) logb.onclick = function () {
+          logBet({ title: g.title, pick: g.modelPick, edge: g.netEdge, rank: g.rank, league: g.league, entryPrice: (g.sides && g.sides[0] && g.sides[0].pct) || 0 });
+        };
+      });
+    });
+  }
+
+  window.saveAutoDiscord = function () {
+    localStorage.setItem('betbetter_auto_discord_elite', ($('auto-discord-elite') && $('auto-discord-elite').checked) ? '1' : '0');
+  };
+  var _lastElite = {};
+  function maybeAutoDiscord(games) {
+    try {
+      if (localStorage.getItem('betbetter_auto_discord_elite') !== '1') return;
+      var settings = JSON.parse(localStorage.getItem('betbetter_settings') || '{}');
+      if (!settings.webhook) return;
+      (games || []).forEach(function (g) {
+        if (g.rank !== 'Elite') return;
+        var key = String(g.id || g.title);
+        if (_lastElite[key]) return;
+        _lastElite[key] = Date.now();
+        sendDiscord(g, true);
+      });
+    } catch (e) {}
+  }
+
+  function sendDiscord(g, silent) {
+    var settings = {};
+    try { settings = JSON.parse(localStorage.getItem('betbetter_settings') || '{}'); } catch (e) {}
+    if (!settings.webhook) {
+      if (!silent) alert('Add Discord webhook in Settings');
+      return;
+    }
+    var content = '**' + (g.rank || '') + '** · score ' + (g.betScore || 0) + '/100\n' +
+      (g.title || '') + '\nPick: **' + (g.modelPick || '') + '** · EV/edge ' + g.netEdge + '% · conf ' + g.confidence +
+      '\n' + (g.url || '');
+    fetch('/api/discord-alert', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ webhookUrl: settings.webhook, content: content })
+    }).then(function (r) {
+      if (!silent) alert(r.ok ? 'Sent to Discord' : 'Discord send failed');
+    }).catch(function () { if (!silent) alert('Discord send failed'); });
+  }
+
+  async function runDeep(card, g) {
+    var panel = card.querySelector('.deep-panel');
+    if (!panel) return;
+    panel.classList.remove('hidden');
+    panel.textContent = 'Running Deep Research (matchup, form, 5 sims)…';
+    var settings = {};
+    try { settings = JSON.parse(localStorage.getItem('betbetter_settings') || '{}'); } catch (e) {}
+    var context = {
+      title: g.title,
+      league: g.league,
+      live: g.live,
+      period: g.period,
+      score: g.score,
+      startTime: g.startTime,
+      modelPick: g.modelPick,
+      betScore: g.betScore,
+      rank: g.rank,
+      netEdge: g.netEdge,
+      ev: g.ev,
+      evaluate: g.evaluate,
+      sides: g.sides,
+      bestProp: g.bestProp,
+    };
+    var prompt = 'Deep-analyze this Polymarket US sports bet. Factor how the game is played, time/score if live, and give TAKE or PASS with 5 mini-simulations.';
+    try {
+      var content = null;
+      try {
+        var r = await fetch('/api/deep-research', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ prompt: prompt, context: context, model: settings.openaiModel || 'gpt-4o' })
+        });
+        if (r.ok) content = (await r.json()).content;
+      } catch (e1) {}
+      if (!content && settings.openaiKey) {
+        var r2 = await fetch('https://api.openai.com/v1/chat/completions', {
+          method: 'POST',
+          headers: { Authorization: 'Bearer ' + settings.openaiKey, 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            model: settings.openaiModel || 'gpt-4o',
+            messages: [
+              { role: 'system', content: 'Sports betting analyst. Sections: VERDICT, MATCHUP, FORM/H2H, KEY DATA, FIVE MINI-SIMULATIONS, RISKS, FINAL PICK.' },
+              { role: 'user', content: prompt + '\n' + JSON.stringify(context) }
+            ],
+            temperature: 0.35
+          })
+        });
+        if (r2.ok) {
+          var d = await r2.json();
+          content = d.choices && d.choices[0] && d.choices[0].message && d.choices[0].message.content;
+        }
+      }
+      panel.textContent = content || 'Set OPENAI_API_KEY on Vercel or paste key in Settings.';
+    } catch (e) {
+      panel.textContent = e.message || String(e);
+    }
+  }
+
+  
+  async function fetchOddsBoard() {
+    var strip = $('odds-strip');
+    if (!strip) return;
+    var settings = {};
+    try { settings = JSON.parse(localStorage.getItem('betbetter_settings') || '{}'); } catch (e) {}
+    if (!settings.oddsApiKey && !window.__oddsEnvHint) {
+      strip.innerHTML = 'Sportsbook odds: add free key in Settings (the-odds-api.com) or ODDS_API_KEY on Vercel.';
+      return;
+    }
+    strip.textContent = 'Loading sportsbook odds…';
+    try {
+      var q = '/api/odds?league=' + encodeURIComponent(league || 'mlb');
+      if (settings.oddsApiKey) q += '&apiKey=' + encodeURIComponent(settings.oddsApiKey);
+      var r = await fetch(q);
+      var data = await r.json();
+      if (!data.ok) {
+        strip.innerHTML = 'Odds: ' + (data.error || 'failed');
+        return;
+      }
+      var lines = (data.games || []).slice(0, 6).map(function (g) {
+        var sample = (g.h2hSample || []).slice(0, 4).map(function (o) {
+          return o.name + ' ' + o.price;
+        }).join(' · ');
+        return '<div class="rounded-lg border border-bb-border bg-bb-card px-3 py-2 mb-1"><span class="text-white">' +
+          String(g.away || '').replace(/</g,'') + ' @ ' + String(g.home || '').replace(/</g,'') +
+          '</span><div class="text-bb-muted mt-0.5">' + (sample || (g.bookmakers + ' books')) + '</div></div>';
+      }).join('');
+      window.__oddsCache = data.games || [];
+      // re-render cards with MC if list already drawn
+      strip.innerHTML = '<p class="mb-2 text-bb-muted">Sportsbook feedback (' + data.sportKey + ')' +
+        (data.remaining != null ? ' · API left ' + data.remaining : '') + '</p>' + (lines || 'No games returned');
+    } catch (e) {
+      strip.textContent = 'Odds load error: ' + (e.message || e);
+    }
+  }
+
+  
+  
+  function normName(s) {
+    return String(s || '')
+      .toLowerCase()
+      .replace(/[^a-z0-9 ]/g, ' ')
+      .replace(/\b(the|at|vs|and)\b/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+  }
+  function tokens(s) {
+    return normName(s).split(' ').filter(function (t) { return t.length > 2; });
+  }
+  function namesMatch(title, home, away) {
+    var t = normName(title);
+    var ht = tokens(home);
+    var at = tokens(away);
+    if (!ht.length || !at.length) return false;
+    var homeHit = ht.some(function (w) { return t.indexOf(w) >= 0; });
+    var awayHit = at.some(function (w) { return t.indexOf(w) >= 0; });
+    return homeHit && awayHit;
+  }
+  function matchOddsToGame(g, oddsGames) {
+    var title = (g.eventTitle || g.title || '');
+    for (var i = 0; i < (oddsGames || []).length; i++) {
+      var o = oddsGames[i];
+      if (!namesMatch(title, o.home, o.away)) continue;
+      var cons = o.consensus || [];
+      if (cons.length) {
+        var line = cons.map(function (c) {
+          return c.name + ' ' + (c.avgAmerican > 0 ? '+' : '') + c.avgAmerican +
+            (c.impliedPct != null ? ' (' + c.impliedPct + '%)' : '');
+        }).join(' · ');
+        var soft = (o.quality && o.quality.softLabel) ? ' · ' + o.quality.softLabel : '';
+        return {
+          line: line + ' · ' + (o.bookmakers || 0) + ' books' + soft,
+          short: (o.bookmakers || 0) + 'bks',
+          consensus: cons
+        };
+      }
+      var sample = (o.h2hSample || []).slice(0, 4).map(function (x) {
+        return x.name + ' ' + x.price;
+      }).join(', ');
+      return { line: sample || ((o.bookmakers || 0) + ' books'), short: (o.bookmakers || 0) + 'bks' };
+    }
+    return null;
+  }
+
+  async function fetchOddsForLeague(lg) {
+    var settings = {};
+    try { settings = JSON.parse(localStorage.getItem('betbetter_settings') || '{}'); } catch (e) {}
+    var key = settings.oddsApiKey || '';
+    var q = '/api/odds?league=' + encodeURIComponent(lg || 'mlb');
+    if (key) q += '&apiKey=' + encodeURIComponent(key);
+    var r = await fetch(q);
+    var data = await r.json();
+    if (!data.ok) throw new Error(data.error || 'Odds failed');
+    return data;
+  }
+
+    
+  
+  function priceSnapKey() { return 'betbetter_price_snap_v1'; }
+  function loadPriceSnaps() {
+    try { return JSON.parse(localStorage.getItem(priceSnapKey()) || '{}'); } catch (e) { return {}; }
+  }
+  function savePriceSnaps(map) {
+    try { localStorage.setItem(priceSnapKey(), JSON.stringify(map)); } catch (e) {}
+  }
+  /** Apply client LM using last refresh prices */
+  function applyClientLineMove(games) {
+    var snaps = loadPriceSnaps();
+    var next = {};
+    var now = Date.now();
+    (games || []).forEach(function (g) {
+      var id = String(g.id || g.title || '');
+      var px = null;
+      if (g.sides && g.sides[0] && g.sides[0].price != null) px = Number(g.sides[0].price);
+      else if (g.impliedPct != null) px = Number(g.impliedPct) / 100;
+      if (px == null || !id) return;
+      next[id] = { p: px, t: now };
+      var prev = snaps[id];
+      if (!g.evaluate) g.evaluate = {};
+      if (!g.evaluate.lineMove) g.evaluate.lineMove = { name: 'Line Move', score: 50, label: '—' };
+      if (prev && prev.p != null && Math.abs(prev.p - px) >= 0) {
+        var rawMove = Math.round((px - prev.p) * 1000) / 10;
+        var side = (g.evaluate.winProbEdge && g.modelPick) ? 'pick' : 'YES';
+        // if model pick is second side, flip
+        var pickIsSide0 = true;
+        if (g.sides && g.sides[1] && g.modelPick && String(g.modelPick) === String(g.sides[1].name)) pickIsSide0 = false;
+        var movePp = pickIsSide0 ? rawMove : -rawMove;
+        var score = 48;
+        if (Math.abs(movePp) < 0.4) { score = 48; g.evaluate.lineMove.label = 'Flat'; }
+        else if (movePp >= 1) { score = Math.min(95, 55 + movePp * 6); g.evaluate.lineMove.label = 'Toward +' + movePp + 'pp'; }
+        else { score = Math.max(8, 48 + movePp * 6); g.evaluate.lineMove.label = 'Against ' + movePp + 'pp'; }
+        g.evaluate.lineMove.movePp = movePp;
+        g.evaluate.lineMove.score = Math.round(score);
+        g.evaluate.lineMove.priorPrice = prev.p;
+        g.evaluate.lineMove.currentPrice = px;
+      } else {
+        g.evaluate.lineMove.label = g.evaluate.lineMove.label || 'Snap saved — refresh for LM';
+      }
+    });
+    // merge snaps (keep old 6h)
+    Object.keys(snaps).forEach(function (k) {
+      if (!next[k] && snaps[k].t && now - snaps[k].t < 6 * 3600 * 1000) next[k] = snaps[k];
+    });
+    savePriceSnaps(next);
+    try {
+      var payload = {};
+      Object.keys(next).forEach(function (k) { payload[k] = next[k].p; });
+      fetch('/api/prices', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ snaps: payload }) }).catch(function(){});
+    } catch (e) {}
+  }
+
+
+  window.loadGames = async function () {
+    var list = $('games-list');
+    var list2 = $('markets-list');
+    var meta = $('meta-line');
+    if (list) list.innerHTML = '<p class="text-sm text-bb-muted">Loading…</p>';
+    try {
+      var minEdge = ($('filter-edge') && $('filter-edge').value) || '0';
+      var minScore = ($('filter-score') && $('filter-score').value) || '0';
+      var rankF = ($('filter-rank') && $('filter-rank').value) || '';
+      var q = '/api/games?mode=' + encodeURIComponent(mode) +
+        '&marketType=' + encodeURIComponent(marketType) +
+        '&minEdge=' + encodeURIComponent(minEdge) +
+        '&minScore=' + encodeURIComponent(minScore);
+      if (rankF) q += '&rank=' + encodeURIComponent(rankF);
+      if (league) q += '&league=' + encodeURIComponent(league);
+      var r = await fetch(q);
+      var data = await r.json();
+      if (!data.ok) throw new Error(data.error || 'API error');
+      var games = data.games || [];
+      var mmeta = $('markets-meta');
+      var meta2 = $('markets-meta');
+      if (meta) {
+        meta.textContent = (data.summary.live || 0) + ' live · ' + (data.summary.upcoming || 0) +
+          ' upcoming · Elite ' + (data.summary.elite || 0) + ' · Good ' + (data.summary.good || 0) +
+          ' · scan ' + marketType;
+        if (mmeta) mmeta.textContent = meta.textContent;
+      }
+      var html = games.length ? games.map(gameCard).join('') : '<p class="text-sm text-bb-muted">No games for this scan.</p>';
+      if (list) list.innerHTML = html;
+      if (list2) list2.innerHTML = html;
+      bindCardActions(games);
+      
+      // Odds first (await) so MC can attach to cards
+      try {
+        var settingsO = {};
+        try { settingsO = JSON.parse(localStorage.getItem('betbetter_settings') || '{}'); } catch (e) {}
+        if (settingsO.oddsApiKey) {
+          var od = await fetchOddsBoard();
+          if (od && od.games) window.__oddsCache = od.games;
+        } else if ($('odds-strip')) {
+          $('odds-strip').innerHTML = 'Sportsbook MC: add Odds API key in Settings → Save.';
+        }
+      } catch (oe) {
+        console.warn(oe);
+      }
+      if (window.__oddsCache && window.__oddsCache.length) {
+        games.forEach(function (g) {
+          var mc = matchOddsToGame(g, window.__oddsCache);
+          if (mc) { g.mcLine = mc.line; g.mcShort = mc.short; }
+        });
+      }
+      maybeAutoDiscord(games);
+    } catch (e) {
+      var err = '<p class="text-sm text-bb-red">' + (e.message || e) + '</p><p class="text-xs text-bb-muted">Check /api/health on your Vercel URL.</p>';
+      if (list) list.innerHTML = err;
+      if (list2) list2.innerHTML = err;
+    }
+  };
+
+  /* Auth + journal */
+  function session() { try { return JSON.parse(localStorage.getItem('betbetter_session') || 'null'); } catch (e) { return null; } }
+  function updateAuth() {
+    var s = session();
+    if ($('auth-label')) $('auth-label').textContent = s ? s.username : 'Guest';
+    if ($('btn-login')) $('btn-login').classList.toggle('hidden', !!s);
+    if ($('btn-logout')) $('btn-logout').classList.toggle('hidden', !s);
+  }
+  window.openLogin = function () { var m = $('login-modal'); if (m) { m.classList.remove('hidden'); m.classList.add('flex'); } };
+  
+  
+  // ——— Journal learning 71–80 + health 100 + digest 97 ———
+  function getBets() {
+    try { return JSON.parse(localStorage.getItem('betbetter_bets') || '[]'); } catch (e) { return []; }
+  }
+  function saveBets(bets) {
+    localStorage.setItem('betbetter_bets', JSON.stringify(bets));
+  }
+  function analyzeJournalLocal(bets) {
+    var list = (bets || []).filter(function (b) { return b.settled; });
+    var open = (bets || []).filter(function (b) { return !b.settled; });
+    function bucket(keyFn) {
+      var map = {};
+      list.forEach(function (b) {
+        var k = keyFn(b) || 'unknown';
+        if (!map[k]) map[k] = { n: 0, wins: 0, pnl: 0, clvSum: 0, clvN: 0 };
+        map[k].n += 1;
+        if (b.won) map[k].wins += 1;
+        var stake = Number(b.stake) || 1;
+        var entry = Number(b.entryPrice) || 50;
+        var e = entry > 1 ? entry / 100 : entry;
+        if (b.won) map[k].pnl += stake * (1 / Math.max(0.05, e) - 1);
+        else map[k].pnl -= stake;
+        if (b.closePrice != null && b.entryPrice != null) {
+          var c = Number(b.closePrice);
+          var cc = c > 1 ? c / 100 : c;
+          map[k].clvSum += (e - cc) * 100;
+          map[k].clvN += 1;
+        }
+      });
+      Object.keys(map).forEach(function (k) {
+        var m = map[k];
+        m.hitRate = m.n ? Math.round((m.wins / m.n) * 1000) / 10 : null;
+        m.avgClv = m.clvN ? Math.round((m.clvSum / m.clvN) * 10) / 10 : null;
+        m.pnl = Math.round(m.pnl * 100) / 100;
+      });
+      return map;
+    }
+    var byRank = bucket(function (b) { return b.rank || 'Pass'; });
+    var byLeague = bucket(function (b) { return (b.league || 'na').toLowerCase(); });
+    var byProp = bucket(function (b) { return b.marketType || 'moneyline'; });
+    var byLm = bucket(function (b) { return b.lmDir || 'unknown'; });
+    var byLiq = bucket(function (b) { return b.liqBucket || 'unknown'; });
+    var eliteThreshold = 78;
+    var elite = byRank.Elite;
+    if (elite && elite.n >= 8 && elite.hitRate != null && elite.hitRate < 52) eliteThreshold = 85;
+    else if (elite && elite.n >= 5 && elite.hitRate != null && elite.hitRate < 48) eliteThreshold = 88;
+    else if (elite && elite.n >= 10 && elite.hitRate != null && elite.hitRate >= 58) eliteThreshold = 74;
+    var killTags = [];
+    Object.keys(byProp).forEach(function (k) {
+      var m = byProp[k];
+      if (m.n >= 6 && m.hitRate != null && m.hitRate < 42) killTags.push(k);
+    });
+    Object.keys(byLeague).forEach(function (k) {
+      var m = byLeague[k];
+      if (m.n >= 8 && m.hitRate != null && m.hitRate < 40) killTags.push('league:' + k);
+    });
+    var recent = list.slice(-5);
+    var losses = 0;
+    for (var i = recent.length - 1; i >= 0; i--) {
+      if (recent[i].won) break;
+      losses++;
+    }
+    var tilt = losses >= 4;
+    var wins = list.filter(function (b) { return b.won; }).length;
+    var clvAll = 0, clvN = 0;
+    list.forEach(function (b) {
+      if (b.closePrice == null || b.entryPrice == null) return;
+      var e = Number(b.entryPrice); var c = Number(b.closePrice);
+      var ee = e > 1 ? e / 100 : e; var cc = c > 1 ? c / 100 : c;
+      clvAll += (ee - cc) * 100; clvN++;
+    });
+    return {
+      settled: list.length,
+      open: open.length,
+      hitRate: list.length ? Math.round((wins / list.length) * 1000) / 10 : null,
+      byRank: byRank,
+      byLeague: byLeague,
+      byProp: byProp,
+      byLm: byLm,
+      byLiq: byLiq,
+      eliteThreshold: eliteThreshold,
+      killTags: killTags,
+      tilt: tilt,
+      consecutiveLosses: losses,
+      avgClv: clvN ? Math.round((clvAll / clvN) * 10) / 10 : null,
+      clvSamples: clvN
+    };
+  }
+  window.__learning = null;
+  function refreshLearning() {
+    window.__learning = analyzeJournalLocal(getBets());
+    return window.__learning;
+  }
+  function liqBucket(liq) {
+    var n = Number(liq) || 0;
+    if (n >= 20000) return 'deep';
+    if (n >= 5000) return 'ok';
+    if (n >= 1000) return 'thin';
+    return 'very-thin';
+  }
+  function lmDirFromGame(g) {
+    var lm = g.evaluate && g.evaluate.lineMove;
+    if (!lm || lm.movePp == null) return 'unknown';
+    if (Math.abs(lm.movePp) < 0.4) return 'flat';
+    return lm.movePp > 0 ? 'with' : 'against';
+  }
+  window.logBet = function (payload) {
+    var bets = getBets();
+    bets.unshift({
+      id: 'b' + Date.now(),
+      title: payload.title,
+      pick: payload.pick,
+      edge: payload.edge,
+      rank: payload.rank,
+      league: payload.league,
+      marketType: payload.marketType || 'moneyline',
+      entryPrice: payload.entryPrice,
+      closePrice: null,
+      lmDir: payload.lmDir || 'unknown',
+      liqBucket: payload.liqBucket || 'unknown',
+      conf: payload.conf || 50,
+      stake: 1,
+      settled: false,
+      won: null,
+      at: new Date().toISOString()
+    });
+    saveBets(bets);
+    refreshLearning();
+    alert('Logged. Settle later for learning/CLV. Suggested units may update.');
+  };
+  window.settleBet = function (id, won) {
+    var bets = getBets();
+    var b = bets.find(function (x) { return x.id === id; });
+    if (!b) return;
+    b.settled = true;
+    b.won = !!won;
+    var close = prompt('Optional close price (¢ or 0-1) for CLV — leave blank to skip', b.entryPrice != null ? b.entryPrice : '');
+    if (close != null && String(close).trim() !== '') b.closePrice = Number(close);
+    saveBets(bets);
+    refreshLearning();
+    renderPortfolio();
+  };
+  function fmtBucket(map) {
+    return Object.keys(map || {}).map(function (k) {
+      var m = map[k];
+      return '<div class="flex justify-between gap-2 text-xs border-b border-bb-border py-1"><span class="text-bb-muted">' + k +
+        '</span><span class="font-mono">' + m.n + 'b · hit ' + (m.hitRate != null ? m.hitRate + '%' : '—') +
+        ' · CLV ' + (m.avgClv != null ? m.avgClv : '—') + '</span></div>';
+    }).join('') || '<p class="text-xs text-bb-muted">No settled data</p>';
+  }
+  window.renderPortfolio = function () {
+    var L = refreshLearning();
+    var box = $('portfolio-box');
+    var health = $('health-box');
+    var banner = $('learning-banner');
+    if (banner) {
+      banner.classList.remove('hidden');
+      var parts = [];
+      parts.push('Elite threshold now <strong>' + L.eliteThreshold + '</strong> (auto from journal)');
+      if (L.tilt) parts.push('<span class="text-bb-red">Tilt lock: ' + L.consecutiveLosses + ' losses — size down</span>');
+      if (L.killTags.length) parts.push('Kill tags: ' + L.killTags.join(', '));
+      if (L.avgClv != null) parts.push('Avg CLV ' + L.avgClv + 'pp (n=' + L.clvSamples + ')');
+      banner.innerHTML = parts.join('<br/>');
+    }
+    if (health) {
+      health.innerHTML =
+        '<p class="text-[10px] uppercase text-bb-muted">Model health (100)</p>' +
+        '<p class="text-sm">Settled <strong>' + L.settled + '</strong> · Open <strong>' + L.open +
+        '</strong> · Hit rate <strong>' + (L.hitRate != null ? L.hitRate + '%' : '—') + '</strong></p>' +
+        '<div class="grid sm:grid-cols-2 gap-3 mt-2">' +
+        '<div><p class="text-xs text-bb-muted mb-1">By rank (71)</p>' + fmtBucket(L.byRank) + '</div>' +
+        '<div><p class="text-xs text-bb-muted mb-1">By league (72)</p>' + fmtBucket(L.byLeague) + '</div>' +
+        '<div><p class="text-xs text-bb-muted mb-1">By market type (73)</p>' + fmtBucket(L.byProp) + '</div>' +
+        '<div><p class="text-xs text-bb-muted mb-1">By LM dir (74)</p>' + fmtBucket(L.byLm) + '</div>' +
+        '<div><p class="text-xs text-bb-muted mb-1">By liquidity (75)</p>' + fmtBucket(L.byLiq) + '</div></div>';
+    }
+    if (!box) return;
+    var session = null;
+    try { session = JSON.parse(localStorage.getItem('betbetter_session') || 'null'); } catch (e) {}
+    var bets = getBets();
+    if (!session) {
+      box.innerHTML = 'Sign in to personalize. Journal still saves on this device.';
+    }
+    var rows = bets.slice(0, 40).map(function (b) {
+      return '<div class="flex flex-wrap items-center justify-between gap-2 py-2 border-b border-bb-border text-xs">' +
+        '<div class="min-w-0"><p class="text-white truncate">' + String(b.title || '').replace(/</g, '') +
+        '</p><p class="text-bb-muted">' + String(b.pick || '') + ' · ' + (b.rank || '') + ' · ' + (b.marketType || '') +
+        ' · entry ' + (b.entryPrice != null ? b.entryPrice : '—') +
+        (b.settled ? (b.won ? ' · WON' : ' · LOST') : '') +
+        (b.closePrice != null ? ' · close ' + b.closePrice : '') + '</p></div>' +
+        (!b.settled
+          ? '<span class="shrink-0"><button type="button" class="text-bb-green mr-2" onclick="settleBet(\'' + b.id + '\',true)">Won</button>' +
+            '<button type="button" class="text-bb-red" onclick="settleBet(\'' + b.id + '\',false)">Lost</button></span>'
+          : '<span class="text-bb-muted shrink-0">settled</span>') +
+        '</div>';
+    }).join('');
+    box.innerHTML = (session ? '<p class="text-xs text-bb-muted mb-2">Signed in as ' + String(session.user || session.username || 'user').replace(/</g, '') + '</p>' : '') +
+      (rows || '<p class="text-bb-muted">No bets logged yet.</p>');
+  };
+  window.exportJournal = function () {
+    var data = JSON.stringify({ bets: getBets(), learning: refreshLearning() }, null, 2);
+    var a = document.createElement('a');
+    a.href = 'data:application/json,' + encodeURIComponent(data);
+    a.download = 'betbetter-journal.json';
+    a.click();
+  };
+  window.sendDigest = async function () {
+    var settings = {};
+    try { settings = JSON.parse(localStorage.getItem('betbetter_settings') || '{}'); } catch (e) {}
+    var L = refreshLearning();
+    var games = window.__lastGames || [];
+    var elite = games.filter(function (g) { return g.rank === 'Elite'; }).slice(0, 5);
+    var live = games.filter(function (g) { return g.live; }).slice(0, 5);
+    var lines = ['**BetBetter digest**', 'Journal: ' + L.settled + ' settled · hit ' + (L.hitRate != null ? L.hitRate + '%' : '—') + ' · Elite≥' + L.eliteThreshold];
+    if (L.tilt) lines.push('Tilt lock on');
+    if (L.killTags.length) lines.push('Kill tags: ' + L.killTags.join(', '));
+    lines.push('', '**Elite**');
+    elite.forEach(function (g) { lines.push('• ' + g.title + ' → ' + g.modelPick + ' · ' + g.betScore); });
+    lines.push('', '**Live**');
+    live.forEach(function (g) { lines.push('• ' + g.title + ' ' + (g.period || '') + ' ' + (g.score || '')); });
+    var text = lines.join('\n');
+    try {
+      var r = await fetch('/api/digest', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text: text, webhook: settings.webhook || '' })
+      });
+      var data = await r.json();
+      if (data.sent) alert('Digest sent to Discord');
+      else {
+        prompt('Copy digest (no webhook or send failed):', text);
+      }
+    } catch (e) {
+      prompt('Copy digest:', text);
+    }
+  };
+  /** Apply learning overlays to games before render */
+  function applyLearningToGames(games) {
+    var L = window.__learning || refreshLearning();
+    (games || []).forEach(function (g) {
+      // 76 threshold
+      if (g.rank === 'Elite' && (g.betScore || 0) < L.eliteThreshold) {
+        g.rank = 'Good';
+        g._rankNote = 'Elite raised to ' + L.eliteThreshold;
+      }
+      // 77 kill tags
+      var mt = g.marketType || g.scanType || '';
+      if (L.killTags.indexOf(mt) >= 0 || L.killTags.indexOf('league:' + (g.league || '')) >= 0) {
+        g._kill = true;
+        if (g.rank === 'Elite') g.rank = 'Good';
+      }
+      // 79 unit
+      var conf = g.confidence || 50;
+      var u = 1;
+      if (conf >= 70) u = 1.25;
+      if (conf < 45) u = 0.5;
+      if (g._kill) u = 0.25;
+      if (L.tilt) u = Math.min(u, 0.5);
+      g.suggestedUnit = u;
+    });
+  }
+
+
+  window.__lastGames = [];
+  window.closeFocus = function () {
+    var p = $('focus-panel');
+    if (p) { p.classList.add('hidden'); p.classList.remove('flex'); }
+  };
+  window.openFocus = function (g) {
+    if (!g) return;
+    var p = $('focus-panel');
+    if (!p) return;
+    p.classList.remove('hidden');
+    p.classList.add('flex');
+    $('focus-title').textContent = g.eventTitle || g.title || 'Game';
+    var la = g.liveAnalysis || {};
+    var phase = (la.phase && la.phase.phaseLabel) || (g.live ? (g.period || 'Live') : 'Pre-game');
+    $('focus-sub').textContent = String(g.league || '').toUpperCase() + ' · ' + phase +
+      (g.score ? ' · ' + g.score : '') + (g.live ? ' · LIVE' : '');
+
+    var related = (window.__lastGames || []).filter(function (x) {
+      if (g.eventTitle) return (x.eventTitle || x.title) === g.eventTitle || x.id === g.id;
+      return (x.title === g.title) || (x.eventTitle && g.title && x.eventTitle.indexOf(g.title.split(' vs')[0]) >= 0);
+    }).slice(0, 12);
+
+    if (!related.length) related = [g];
+
+    var tips = (la.tips || []).map(function (t) {
+      return '<li class="text-bb-muted text-xs mb-1">' + String(t).replace(/</g, '') + '</li>';
+    }).join('');
+
+    var badges = (la.badges || []).map(function (b) {
+      return '<span class="text-[10px] px-2 py-0.5 rounded-full bg-bb-elevated border border-bb-border">' + b + '</span>';
+    }).join(' ');
+
+    var smTags = (g.evaluate && g.evaluate.smartMoney && g.evaluate.smartMoney.tags || []).map(function (t) {
+      return '<span class="text-[10px] text-bb-muted">#' + t + '</span>';
+    }).join(' ');
+
+    var marketsHtml = related.map(function (m) {
+      var edge = (m.netEdge >= 0 ? '+' : '') + (m.netEdge != null ? m.netEdge : '—');
+      return '<div class="rounded-xl border border-bb-border bg-bb-card p-3 space-y-1">' +
+        '<div class="flex justify-between gap-2"><p class="text-xs font-medium leading-snug">' + String(m.title || '').replace(/</g, '') +
+        '</p><span class="' + rankClass(m.rank) + ' text-[9px] font-bold px-1.5 py-0.5 rounded h-fit">' + String(m.rank || '').toUpperCase() + '</span></div>' +
+        '<p class="text-[11px] text-bb-muted">Pick <span class="text-bb-green">' + String(m.modelPick || '—').replace(/</g, '') +
+        '</span> · score ' + (m.betScore || 0) + ' · EV ' + edge + '%' +
+        (m.priceDisplay ? ' · ' + m.priceDisplay : '') + '</p>' +
+        '<p class="text-[11px] text-bb-muted">Implied ' + (m.impliedPct != null ? m.impliedPct + '%' : '—') +
+        ' · Fair ' + (m.modelFairPct != null ? m.modelFairPct + '%' : '—') + '</p>' +
+        '<a class="text-[11px] text-bb-green" target="_blank" rel="noopener" href="' + (m.url || 'https://polymarket.us') + '">Trade</a></div>';
+    }).join('');
+
+    $('focus-body').innerHTML =
+      '<div class="flex flex-wrap gap-1.5">' + (badges || '<span class="text-xs text-bb-muted">No live badges</span>') + '</div>' +
+      (la.trapRisk ? '<p class="text-xs text-bb-red font-medium">Late / high-price trap risk — tiny upside.</p>' : '') +
+      (la.liqCrush ? '<p class="text-xs text-bb-orange font-medium">Thin live liquidity — hard to fill.</p>' : '') +
+      '<div class="rounded-xl bg-bb-card border border-bb-border p-3">' +
+        '<p class="text-[10px] uppercase text-bb-muted mb-1">Live read (41–48)</p>' +
+        '<ul class="list-disc pl-4">' + (tips || '<li class="text-xs text-bb-muted">No tips</li>') + '</ul></div>' +
+      '<div class="rounded-xl bg-bb-card border border-bb-border p-3">' +
+        '<p class="text-[10px] uppercase text-bb-muted mb-1">This market</p>' +
+        '<p class="text-sm">Model pick <span class="text-bb-green font-semibold">' + String(g.modelPick || '—').replace(/</g, '') + '</span>' +
+        ' · score <span class="font-mono">' + (g.betScore || 0) + '</span></p>' +
+        evalBars(g.evaluate, g.mcShort || '') +
+        (smTags ? '<p class="mt-2 text-[11px]">Smart$ tags: ' + smTags + '</p>' : '') +
+      '</div>' +
+      '<div><p class="text-[10px] uppercase text-bb-muted mb-2">Related markets (this game)</p>' +
+        '<div class="space-y-2">' + marketsHtml + '</div></div>' +
+      '<div class="flex flex-wrap gap-2">' +
+        '<button type="button" class="text-xs px-3 py-1.5 rounded-lg border border-bb-purple/40 text-bb-purple" id="focus-deep">Deep Research</button>' +
+        '<button type="button" class="text-xs px-3 py-1.5 rounded-lg bg-[#5865F2]/20 text-[#5865F2]" id="focus-discord">Send Discord</button>' +
+        '<button type="button" class="text-xs px-3 py-1.5 rounded-lg border border-bb-border text-bb-muted" id="focus-log">Log bet</button></div>';
+
+    var db = $('focus-deep');
+    if (db) db.onclick = function () {
+      runDeep({ querySelector: function () { return $('focus-body'); }, closest: function(){return null;} }, g);
+      // simpler: alert research into a panel at bottom
+      var el = document.createElement('div');
+      el.className = 'deep-panel text-xs text-bb-muted bg-bb-elevated rounded-lg p-3 mt-2';
+      el.textContent = 'Running…';
+      $('focus-body').appendChild(el);
+      // call API
+      (async function () {
+        var settings = {};
+        try { settings = JSON.parse(localStorage.getItem('betbetter_settings') || '{}'); } catch (e) {}
+        var context = { title: g.title, eventTitle: g.eventTitle, league: g.league, live: g.live, period: g.period, score: g.score, liveAnalysis: g.liveAnalysis, modelPick: g.modelPick, betScore: g.betScore, evaluate: g.evaluate };
+        try {
+          var r = await fetch('/api/deep-research', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ prompt: 'Live focus analysis. Use score, phase, trap risk.', context: context, model: settings.openaiModel || 'gpt-4o' }) });
+          if (r.ok) { var d = await r.json(); el.textContent = d.content || 'No content'; }
+          else el.textContent = 'Add OPENAI_API_KEY or key in Settings';
+        } catch (e) { el.textContent = e.message || String(e); }
+      })();
+    };
+    var dc = $('focus-discord');
+    if (dc) dc.onclick = function () { sendDiscord(g); };
+    var lg = $('focus-log');
+    if (lg) lg.onclick = function () {
+      logBet({ title: g.title, pick: g.modelPick, edge: g.netEdge, rank: g.rank, league: g.league, entryPrice: g.impliedPct || 0, marketType: g.marketType || g.scanType || marketType, lmDir: lmDirFromGame(g), liqBucket: liqBucket(g.liquidity), conf: g.confidence });
+    };
+  };
+
+
+  window.closeLogin = function () { var m = $('login-modal'); if (m) { m.classList.add('hidden'); m.classList.remove('flex'); } };
+  window.doSignup = function () {
+    var u = (($('login-user') || {}).value || '').trim();
+    var p = ($('login-pass') || {}).value || '';
+    if (u.length < 2 || p.length < 4) return alert('Username 2+, password 4+');
+    var users = {};
+    try { users = JSON.parse(localStorage.getItem('betbetter_users') || '{}'); } catch (e) {}
+    if (users[u]) return alert('Username taken');
+    users[u] = { password: p };
+    localStorage.setItem('betbetter_users', JSON.stringify(users));
+    localStorage.setItem('betbetter_session', JSON.stringify({ username: u, at: Date.now() }));
+    closeLogin(); updateAuth(); renderPortfolio();
+  };
+  window.doLogin = function () {
+    var u = (($('login-user') || {}).value || '').trim();
+    var p = ($('login-pass') || {}).value || '';
+    var users = {};
+    try { users = JSON.parse(localStorage.getItem('betbetter_users') || '{}'); } catch (e) {}
+    if (!users[u] || users[u].password !== p) return alert('Wrong credentials');
+    localStorage.setItem('betbetter_session', JSON.stringify({ username: u, at: Date.now() }));
+    closeLogin(); updateAuth(); renderPortfolio();
+  };
+  window.logout = function () { localStorage.removeItem('betbetter_session'); updateAuth(); renderPortfolio(); };
+
+  function journalKey() {
+    var s = session();
+    return s ? 'betbetter_journal_' + (s.discordId || s.username) : 'betbetter_journal_guest';
+  }
+  function getJournal() { try { return JSON.parse(localStorage.getItem(journalKey()) || '[]'); } catch (e) { return []; } }
+  
+  window.settleBet = function (id, won) {
+    var j = getJournal();
+    var row = j.find(function (x) { return x.id === id; });
+    if (!row) return;
+    row.settled = true; row.result = won ? 'W' : 'L';
+    localStorage.setItem(journalKey(), JSON.stringify(j));
+    renderPortfolio();
+  };
+  function renderPortfolio() {
+    var el = $('portfolio-box');
+    if (!el) return;
+    var s = session();
+    var j = getJournal();
+    var html = s ? '<p class="mb-3 text-white">Hi <span class="text-bb-green">' + s.username + '</span></p>' : '<p class="mb-3">Guest journal (this device)</p>';
+    if (!j.length) html += '<p class="text-bb-muted">No bets logged.</p>';
+    else {
+      html += j.slice(0, 25).map(function (row) {
+        return '<div class="border border-bb-border rounded-lg p-3 mb-2 text-xs"><div class="text-white text-sm">' + String(row.title || '').replace(/</g, '') +
+          '</div>Pick ' + String(row.pick || '') + ' · ' + row.rank + ' · edge ' + row.edge +
+          (row.settled ? ' · ' + row.result : ' · <button class="text-bb-green" onclick="settleBet(' + row.id + ',true)">Won</button> <button class="text-bb-red" onclick="settleBet(' + row.id + ',false)">Lost</button>') +
+          '</div>';
+      }).join('');
+    }
+    el.innerHTML = html;
+  }
+
+  window.saveSettings = function () {
+    localStorage.setItem('betbetter_settings', JSON.stringify({
+      openaiKey: ($('openai-key') || {}).value || '',
+      openaiModel: ($('openai-model') || {}).value || 'gpt-4o',
+      webhook: ($('webhook-url') || {}).value || '',
+      polyKeyId: ($('poly-key-id') || {}).value || '',
+      polySecret: ($('poly-secret') || {}).value || '',
+      oddsApiKey: ($('odds-api-key') || {}).value || ''
+    }));
+    alert('Saved');
+  };
+
+  window.testOdds = async function () {
+    var settings = {};
+    try { settings = JSON.parse(localStorage.getItem('betbetter_settings') || '{}'); } catch (e) {}
+    var key = settings.oddsApiKey || '';
+    var q = '/api/odds?league=' + (league || 'mlb');
+    if (key) q += '&apiKey=' + encodeURIComponent(key);
+    try {
+      var r = await fetch(q);
+      var data = await r.json();
+      if (!data.ok) return alert('Odds error: ' + (data.error || r.status));
+      alert('Odds OK · ' + data.count + ' games · sport ' + data.sportKey + (data.remaining != null ? ' · remaining ' + data.remaining : ''));
+    } catch (e) {
+      alert('Odds test failed: ' + (e.message || e));
+    }
+  };
+
+
+  document.addEventListener('DOMContentLoaded', function () {
+    if (location.search.indexOf('auth=discord') >= 0) history.replaceState({}, '', '/');
+    try {
+      var st = JSON.parse(localStorage.getItem('betbetter_settings') || '{}');
+      if ($('openai-key') && st.openaiKey) $('openai-key').value = st.openaiKey;
+      if ($('openai-model') && st.openaiModel) $('openai-model').value = st.openaiModel;
+      if ($('webhook-url') && st.webhook) $('webhook-url').value = st.webhook;
+      if ($('poly-key-id') && st.polyKeyId) $('poly-key-id').value = st.polyKeyId;
+      if ($('poly-secret') && st.polySecret) $('poly-secret').value = st.polySecret;
+      if ($('odds-api-key') && st.oddsApiKey) $('odds-api-key').value = st.oddsApiKey;
+    } catch (e) {}
+    if ($('auto-discord-elite')) $('auto-discord-elite').checked = localStorage.getItem('betbetter_auto_discord_elite') === '1';
+    updateAuth();
+    renderPortfolio();
+    loadGames();
+    setInterval(loadGames, 60000);
+  });
+})();
+</script>
+</body>
+</html>
